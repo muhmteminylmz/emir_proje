@@ -474,7 +474,7 @@ if analyze:
                     manipulated_url = url
                     changes = []
                     if url.startswith("http://"):
-                        manipulated_url = "https://" + url.replace("http://", "", 1)[:]
+                        manipulated_url = "https://" + url.replace("http://", "", 1)
                         changes.append("HTTP→HTTPS")
                     elif not url.startswith("https://"):
                         manipulated_url = "https://" + url
