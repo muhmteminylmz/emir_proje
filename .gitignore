@@ -1,0 +1,3 @@
+*.pkl
+data/raw/
+data/models/
