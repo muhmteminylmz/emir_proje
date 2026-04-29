@@ -276,8 +276,14 @@ def load_resources():
 model, defended_model, feature_names, pipeline, cialdini = load_resources()
 
 def extract_features(url):
-    print(f'DEBUG: {url}')
-    df = pd.DataFrame({'url': [url], 'label': [0]})
+    # Şemasız URL'leri (örn. "google.com") https:// olarak normalize et.
+    # Modern tarayıcıların varsayılanıyla tutarlı; böylece "google.com" ve
+    # "https://google.com" aynı özellikleri ve aynı tahmini üretir.
+    # Açıkça "http://" yazılan URL'ler değiştirilmez (is_https=0 korunur).
+    url_for_features = url
+    if url_for_features and not url_for_features.startswith(('http://', 'https://')):
+        url_for_features = 'https://' + url_for_features
+    df = pd.DataFrame({'url': [url_for_features], 'label': [0]})
     features = pipeline.transform(df, verbose=False)
     feature_cols = [c for c in features.columns if c not in ['url', 'label', 'timestamp']]
     X = features[feature_cols].reindex(columns=feature_names, fill_value=0).values
