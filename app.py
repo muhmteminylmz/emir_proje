@@ -8,9 +8,14 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import time
+from urllib.parse import urlparse as _urlparse
 from src.feature_extractor import FeaturePipeline
 from src.cialdini import CialdiniAnalyzer
 from src.utils import load_model
+
+# HTTP bias düzeltme faktörü: eğitim verisinde HTTP=phishing bias'ı olduğundan,
+# HTTP ama başka risk sinyali olmayan URL'lerin olasılığı bu faktörle azaltılır.
+HTTP_BIAS_CORRECTION_FACTOR = 0.35
 
 st.set_page_config(
     page_title="PhishGuard AI", 
@@ -271,8 +276,14 @@ def load_resources():
 model, defended_model, feature_names, pipeline, cialdini = load_resources()
 
 def extract_features(url):
-    print(f'DEBUG: {url}')
-    df = pd.DataFrame({'url': [url], 'label': [0]})
+    # Şemasız URL'leri (örn. "google.com") https:// olarak normalize et.
+    # Modern tarayıcıların varsayılanıyla tutarlı; böylece "google.com" ve
+    # "https://google.com" aynı özellikleri ve aynı tahmini üretir.
+    # Açıkça "http://" yazılan URL'ler değiştirilmez (is_https=0 korunur).
+    url_for_features = url
+    if url_for_features and not url_for_features.startswith(('http://', 'https://')):
+        url_for_features = 'https://' + url_for_features
+    df = pd.DataFrame({'url': [url_for_features], 'label': [0]})
     features = pipeline.transform(df, verbose=False)
     feature_cols = [c for c in features.columns if c not in ['url', 'label', 'timestamp']]
     X = features[feature_cols].reindex(columns=feature_names, fill_value=0).values
@@ -294,6 +305,40 @@ if analyze:
                 prediction = 1 if prob > 0.50 else 0
                 cld_result = cialdini.explain(url)
 
+                # ── HTTP BIAS CORRECTION ──
+                # Eğitim verisi HTTP=phishing, HTTPS=meşru şeklinde çarpık olduğundan
+                # model HTTP meşru URL'leri yanlışlıkla phishing olarak işaretleyebilir.
+                # Diğer risk sinyalleri düşükse ve URL HTTP ise olası false positive'i tespit et.
+                http_bias_warning = False
+                _parsed_scheme = _urlparse(url if url.startswith(('http://', 'https://')) else 'http://' + url).scheme
+                is_http_url = (_parsed_scheme == "http")
+
+                if is_http_url and prediction == 1:
+                    # Feature'lardan risk sinyallerini çıkar
+                    _fn = feature_names
+                    def _fval(name):
+                        idx = _fn.index(name) if name in _fn else -1
+                        return float(X[0][idx]) if idx >= 0 else 0.0
+
+                    tld_susp   = _fval("tld_suspicious")
+                    susp_kw    = _fval("suspicious_keywords")
+                    brand_dom  = _fval("brand_in_non_brand_domain")
+                    homoglyph  = _fval("has_homoglyph")
+                    digit_sub  = _fval("digit_substitution")
+                    is_ip_addr = _fval("is_ip")
+                    has_at     = _fval("num_at")
+                    cld_total  = _fval("cld_total_score")
+
+                    # Eğer HTTP dışında ciddi risk sinyali yoksa → olası false positive
+                    other_risk = (tld_susp + (1 if susp_kw > 0 else 0) + brand_dom +
+                                  homoglyph + digit_sub + is_ip_addr + (1 if has_at > 0 else 0) +
+                                  (1 if cld_total > 0.15 else 0))
+                    if other_risk == 0:
+                        http_bias_warning = True
+                        # Modelin öğrendiği HTTP bias'ını HTTP_BIAS_CORRECTION_FACTOR ile telafi et
+                        prob = prob * HTTP_BIAS_CORRECTION_FACTOR
+                        prediction = 0
+
                 # ── THREAT ASSESSMENT ──
                 st.markdown('<div class="sec-hdr">THREAT ASSESSMENT RESULT</div>', unsafe_allow_html=True)
                 col_res, col_info = st.columns([1,1])
@@ -308,6 +353,15 @@ if analyze:
                             <div class="prog-container"><div class="prog-fill prog-danger" style="width:{prob*100:.0f}%"></div></div>
                             <div style="font-size:0.65rem;color:#ff006e;letter-spacing:0.2em;margin-top:0.5rem;">⛔ MALICIOUS URL — DO NOT VISIT</div>
                         </div>""", unsafe_allow_html=True)
+                    elif http_bias_warning:
+                        st.markdown(f"""
+                        <div class="result-box" style="border:2px solid #ffa500;background:rgba(255,165,0,0.05);">
+                            <div class="result-status" style="color:#ffa500;text-shadow:0 0 20px #ffa500;">⚠ HTTP — UNENCRYPTED</div>
+                            <div class="result-percentage" style="color:#ffa500;text-shadow:0 0 30px rgba(255,165,0,0.6);">{1-prob:.1%}</div>
+                            <div style="font-size:0.6rem;color:rgba(255,165,0,0.5);letter-spacing:0.3em;">LEGITIMACY CONFIDENCE</div>
+                            <div class="prog-container"><div class="prog-fill" style="width:{(1-prob)*100:.0f}%;background:linear-gradient(90deg,#7a4000,#ffa500);box-shadow:0 0 10px rgba(255,165,0,0.5);"></div></div>
+                            <div style="font-size:0.65rem;color:#ffa500;letter-spacing:0.2em;margin-top:0.5rem;">⚠ NO PHISHING SIGNALS — BUT UNENCRYPTED (HTTP)</div>
+                        </div>""", unsafe_allow_html=True)
                     else:
                         st.markdown(f"""
                         <div class="result-box result-box-safe">
@@ -319,6 +373,8 @@ if analyze:
                         </div>""", unsafe_allow_html=True)
 
                 with col_info:
+                    verdict_color = '#ff006e' if prediction==1 else ('#ffa500' if http_bias_warning else '#00ff41')
+                    verdict_text  = 'MALICIOUS' if prediction==1 else ('HTTP_LEGITIMATE' if http_bias_warning else 'LEGITIMATE')
                     st.markdown(f"""
                     <div class="info-panel">
                         <div class="info-row"><span class="info-key">TARGET_URL</span><span class="info-val">{url[:55]}{'...' if len(url)>55 else ''}</span></div>
@@ -327,7 +383,15 @@ if analyze:
                         <div class="info-row"><span class="info-key">MODEL</span><span class="info-val">XGBoost // Zero-Day Split // ACC=94.08%</span></div>
                         <div class="info-row"><span class="info-key">THREAT_SCORE</span><span class="info-val">{prob:.6f}</span></div>
                         <div class="info-row"><span class="info-key">PSY_SCORE</span><span class="info-val" style="color:#a855f7;">{cld_result['total_score']:.6f}</span></div>
-                        <div class="info-row"><span class="info-key">VERDICT</span><span class="info-val" style="color:{'#ff006e' if prediction==1 else '#00ff41'};">{'MALICIOUS' if prediction==1 else 'LEGITIMATE'}</span></div>
+                        <div class="info-row"><span class="info-key">VERDICT</span><span class="info-val" style="color:{verdict_color};">{verdict_text}</span></div>
+                    </div>""", unsafe_allow_html=True)
+
+                if http_bias_warning:
+                    st.markdown("""
+                    <div class="contrib-alert" style="border-color:rgba(255,165,0,0.4);background:rgba(255,165,0,0.05);color:#ffa500;">
+                        ⚠ HTTP BIAS CORRECTION APPLIED: Bu URL HTTP protokolü kullanıyor ancak phishing'e özgü başka sinyal tespit edilmedi
+                        (şüpheli TLD, marka taklidi, homoglyph, zararlı keyword yok). Model eğitim verisinde HTTP=phishing bias'ı
+                        bulunduğundan düzeltme uygulandı. URL yine de şifresizdir; mümkünse HTTPS tercih edilmeli.
                     </div>""", unsafe_allow_html=True)
 
                 # ── CIALDINI ──
@@ -409,9 +473,12 @@ if analyze:
 
                     manipulated_url = url
                     changes = []
-                    if not url.startswith("https"):
-                        manipulated_url = "https" + manipulated_url[4:]
+                    if url.startswith("http://"):
+                        manipulated_url = "https://" + url.replace("http://", "", 1)
                         changes.append("HTTP→HTTPS")
+                    elif not url.startswith("https://"):
+                        manipulated_url = "https://" + url
+                        changes.append("scheme added")
                     if "@" in manipulated_url:
                         manipulated_url = manipulated_url.split("@")[-1]
                         changes.append("@ stripped")

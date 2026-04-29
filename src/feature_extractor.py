@@ -90,6 +90,9 @@ class URLFeatureExtractor:
     def extract(self, url: str) -> Dict:
         features = {}
         try:
+            # Normalize: add scheme if missing so urlparse works correctly
+            if url and not url.startswith(('http://', 'https://')):
+                url = 'http://' + url
             parsed = urlparse(url)
             ext    = tldextract.extract(url)
             features["url_length"]        = len(url)
@@ -254,8 +257,13 @@ class AdversarialFeatureExtractor:
         return count
 
     def _brand_in_domain(self, domain: str) -> int:
+        # Domainin kendisi zaten bilinen bir marka ise false positive sayma.
+        if domain in KNOWN_BRANDS:
+            return 0
+        # Çok kısa marka isimleri ("t", "ow", "ift" gibi) substring olarak
+        # neredeyse her domainde eşleşir; en az 4 karakter uzunluğundaki markaları kullan.
         for brand in KNOWN_BRANDS:
-            if brand in domain and domain != brand:
+            if len(brand) >= 4 and brand in domain:
                 return 1
         return 0
 
@@ -267,7 +275,9 @@ class AdversarialFeatureExtractor:
         for digit, letter in substitutions:
             if digit in domain:
                 modified = domain.replace(digit, letter)
-                if any(brand in modified for brand in KNOWN_BRANDS):
+                # Kısa marka isimleri (< 4 karakter) substring eşleşmesinde
+                # false positive üretir; sadece 4+ karakter uzunluğundaki markalarla karşılaştır.
+                if any(brand in modified for brand in KNOWN_BRANDS if len(brand) >= 4):
                     return 1
         return 0
 
