@@ -90,6 +90,9 @@ class URLFeatureExtractor:
     def extract(self, url: str) -> Dict:
         features = {}
         try:
+            # Normalize: add scheme if missing so urlparse works correctly
+            if url and not url.startswith(('http://', 'https://')):
+                url = 'http://' + url
             parsed = urlparse(url)
             ext    = tldextract.extract(url)
             features["url_length"]        = len(url)

@@ -92,14 +92,10 @@ def load_dataframe(filename: str, folder=DATA_PROCESSED, fmt="csv") -> pd.DataFr
 
 
 def save_model(model, name: str):
-    """Modeli pickle ile kaydeder."""
-    import os
-    save_path = Path(r"C:\Users\emira\OneDrive\Desktop\main projem\data\models")
-    save_path.mkdir(parents=True, exist_ok=True)
-    path = save_path / f"{name}.pkl"
-    with open(path, "wb") as f:
-        pickle.dump(model, f)
-    print(f"Model kaydedildi: {path}")
+    """Modeli joblib ile kaydeder."""
+    path = DATA_MODELS / f"{name}.pkl"
+    joblib.dump(model, path)
+    logger.info(f"Model kaydedildi: {path}")
 
 
 def load_model(name: str):

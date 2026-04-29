@@ -49,6 +49,11 @@ LEGITIMATE_URLS = [
     "https://www.salesforce.com", "https://www.zoom.us", "https://www.slack.com",
     "https://www.trello.com", "https://www.notion.so", "https://www.canva.com",
     "https://www.cloudflare.com", "https://www.digitalocean.com", "https://www.heroku.com",
+    # HTTP kullanan meşru siteler - modelin HTTP=phishing bias'ını önlemek için gerekli
+    "http://www.bbc.co.uk", "http://www.reuters.com", "http://www.archive.org",
+    "http://www.gnu.org", "http://www.debian.org", "http://www.apache.org",
+    "http://www.mit.edu", "http://www.harvard.edu", "http://www.cornell.edu",
+    "http://www.w3.org", "http://www.ietf.org", "http://www.python.org",
 ]
 
 REQUEST_HEADERS = {
@@ -113,12 +118,16 @@ class PhishTankCollector:
         ]
         urls, timestamps = [], []
         np.random.seed(42)
-        
+
         # 2023 ve 2024 için dengeli üretim
+        # Gerçek phishing siteleri de HTTPS kullanabiliyor (Let's Encrypt ücretsiz sertifika)
+        # Eğitim verisinde sadece http:// kullanmak modele HTTP=phishing bias'ı yaratır
+        schemes = ["http://", "https://"]
         for year in [2023, 2024]:
             for i in range(500):
                 pattern = random.choice(patterns)
-                url = f"http://{pattern.format(random.randint(1000, 9999))}"
+                scheme = random.choice(schemes)
+                url = f"{scheme}{pattern.format(random.randint(1000, 9999))}"
                 urls.append(url)
                 month = random.randint(1, 12)
                 day   = random.randint(1, 28)
@@ -510,15 +519,18 @@ def run_data_collection(
         combined = meta_collector.collect_all(combined, sample_size=metadata_sample)
     else:
         # Dummy metadata sütunları ekle
+        # has_ssl: HTTPS ile başlayan URL'ler SSL kullanıyor demektir.
+        # Şemasız URL'ler (örn: "example.com") HTTP olarak kabul edilir, has_ssl=0 alır.
+        # Bu, feature_extractor.py'nin şemasız URL'leri http:// olarak normalize etmesiyle tutarlıdır.
         combined["domain_age_days"]        = -1
-        combined["has_ssl"]                = 0
+        combined["has_ssl"]                = combined["url"].str.startswith("https://").astype(int)
         combined["ssl_issuer"]             = "unknown"
         combined["ssl_issuer_is_free"]     = 0
         combined["registrar"]              = "unknown"
         combined["whois_available"]        = 0
         combined["registration_period_days"] = -1
         combined["country"]               = "unknown"
-        print("ℹ️  Metadata atlandı (collect_metadata=False)")
+        print("ℹ️  Metadata atlandı (collect_metadata=False), has_ssl URL şemasından çıkarıldı")
     
     # 5. Kaydet
     out_path = DATA_RAW / f"{output_name}.csv"
