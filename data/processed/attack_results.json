@@ -1,0 +1,189 @@
+{
+  "minimal": [
+    {
+      "model": "Random Forest",
+      "acc_normal": 0.9271,
+      "f1_normal": 0.9267,
+      "acc_adversarial": 0.9037,
+      "f1_adversarial": 0.9007,
+      "acc_drop": 0.0234,
+      "f1_drop": 0.0259,
+      "attack_success_rate": 0.0509,
+      "robustness_score": 0.9766
+    },
+    {
+      "model": "XGBoost",
+      "acc_normal": 0.9392,
+      "f1_normal": 0.9392,
+      "acc_adversarial": 0.9235,
+      "f1_adversarial": 0.9223,
+      "acc_drop": 0.0157,
+      "f1_drop": 0.0169,
+      "attack_success_rate": 0.0334,
+      "robustness_score": 0.9843
+    },
+    {
+      "model": "Logistic Regression",
+      "acc_normal": 0.89,
+      "f1_normal": 0.8862,
+      "acc_adversarial": 0.7883,
+      "f1_adversarial": 0.7552,
+      "acc_drop": 0.1017,
+      "f1_drop": 0.131,
+      "attack_success_rate": 0.2376,
+      "robustness_score": 0.8983
+    }
+  ],
+  "gaussian": [
+    {
+      "model": "Random Forest",
+      "acc_normal": 0.9271,
+      "f1_normal": 0.9267,
+      "acc_adversarial": 0.9271,
+      "f1_adversarial": 0.9267,
+      "acc_drop": 0.0,
+      "f1_drop": 0.0,
+      "attack_success_rate": 0.0,
+      "robustness_score": 1.0
+    },
+    {
+      "model": "XGBoost",
+      "acc_normal": 0.9392,
+      "f1_normal": 0.9392,
+      "acc_adversarial": 0.947,
+      "f1_adversarial": 0.9474,
+      "acc_drop": -0.0078,
+      "f1_drop": -0.0082,
+      "attack_success_rate": -0.0166,
+      "robustness_score": 1.0078
+    },
+    {
+      "model": "Logistic Regression",
+      "acc_normal": 0.89,
+      "f1_normal": 0.8862,
+      "acc_adversarial": 0.8895,
+      "f1_adversarial": 0.8856,
+      "acc_drop": 0.0005,
+      "f1_drop": 0.0006,
+      "attack_success_rate": 0.0012,
+      "robustness_score": 0.9995
+    }
+  ],
+  "combined": [
+    {
+      "model": "Random Forest",
+      "acc_normal": 0.9271,
+      "f1_normal": 0.9267,
+      "acc_adversarial": 0.9038,
+      "f1_adversarial": 0.9009,
+      "acc_drop": 0.0233,
+      "f1_drop": 0.0257,
+      "attack_success_rate": 0.0505,
+      "robustness_score": 0.9767
+    },
+    {
+      "model": "XGBoost",
+      "acc_normal": 0.9392,
+      "f1_normal": 0.9392,
+      "acc_adversarial": 0.9409,
+      "f1_adversarial": 0.9409,
+      "acc_drop": -0.0017,
+      "f1_drop": -0.0018,
+      "attack_success_rate": -0.0036,
+      "robustness_score": 1.0017
+    },
+    {
+      "model": "Logistic Regression",
+      "acc_normal": 0.89,
+      "f1_normal": 0.8862,
+      "acc_adversarial": 0.783,
+      "f1_adversarial": 0.7475,
+      "acc_drop": 0.1071,
+      "f1_drop": 0.1387,
+      "attack_success_rate": 0.25,
+      "robustness_score": 0.8929
+    }
+  ],
+  "sensitivity": {
+    "feature": {
+      "7": "is_https",
+      "12": "domain_length",
+      "0": "url_length",
+      "4": "url_entropy",
+      "5": "domain_entropy",
+      "3": "digit_ratio",
+      "2": "num_at",
+      "1": "num_hyphens",
+      "9": "has_homoglyph",
+      "6": "suspicious_keywords",
+      "11": "brand_in_non_brand_domain",
+      "10": "homoglyph_count",
+      "8": "min_brand_levenshtein",
+      "13": "num_subdomains"
+    },
+    "baseline_acc": {
+      "7": 0.93,
+      "12": 0.93,
+      "0": 0.93,
+      "4": 0.93,
+      "5": 0.93,
+      "3": 0.93,
+      "2": 0.93,
+      "1": 0.93,
+      "9": 0.93,
+      "6": 0.93,
+      "11": 0.93,
+      "10": 0.93,
+      "8": 0.93,
+      "13": 0.93
+    },
+    "modified_acc": {
+      "7": 0.79,
+      "12": 0.91,
+      "0": 0.92,
+      "4": 0.925,
+      "5": 0.925,
+      "3": 0.925,
+      "2": 0.93,
+      "1": 0.93,
+      "9": 0.93,
+      "6": 0.93,
+      "11": 0.93,
+      "10": 0.93,
+      "8": 0.935,
+      "13": 0.95
+    },
+    "acc_drop": {
+      "7": 0.14,
+      "12": 0.02,
+      "0": 0.01,
+      "4": 0.005,
+      "5": 0.005,
+      "3": 0.005,
+      "2": 0.0,
+      "1": 0.0,
+      "9": 0.0,
+      "6": 0.0,
+      "11": 0.0,
+      "10": 0.0,
+      "8": -0.005,
+      "13": -0.02
+    },
+    "impact": {
+      "7": "HIGH",
+      "12": "LOW",
+      "0": "LOW",
+      "4": "LOW",
+      "5": "LOW",
+      "3": "LOW",
+      "2": "LOW",
+      "1": "LOW",
+      "9": "LOW",
+      "6": "LOW",
+      "11": "LOW",
+      "10": "LOW",
+      "8": "LOW",
+      "13": "LOW"
+    }
+  }
+}

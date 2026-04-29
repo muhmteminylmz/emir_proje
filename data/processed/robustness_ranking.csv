@@ -1,0 +1,8 @@
+Model,Normal Acc,Adversarial Acc,Accuracy Drop,Robustness,Type
+RF-D,0.9101,0.9777,-0.0675,1.0675,Defended
+XGB-D,0.9351,0.9797,-0.0445,1.0445,Defended
+LR-D,0.8632,0.8882,-0.0251,1.0251,Defended
+XGB,0.9392,0.9409,-0.0017,1.0017,Baseline
+RF,0.9271,0.9038,0.0233,0.9767,Baseline
+ENS,0.9322,0.9068,0.0254,0.9746,Defended
+LR,0.89,0.783,0.1071,0.8929,Baseline

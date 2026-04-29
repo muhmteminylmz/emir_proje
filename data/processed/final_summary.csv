@@ -1,0 +1,8 @@
+Model,Normal Acc,Adversarial Acc,Drop
+Random Forest,0.9271,0.9038,0.0233
+XGBoost,0.9392,0.9409,-0.0017
+Logistic Regression,0.89,0.783,0.1071
+Random Forest_robust,0.9101,0.9777,-0.0675
+XGBoost_robust,0.9351,0.9797,-0.0445
+Logistic Regression_robust,0.8632,0.8882,-0.0251
+ensemble,0.9322,0.9068,0.0254
